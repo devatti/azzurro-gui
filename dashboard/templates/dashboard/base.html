@@ -1,0 +1,76 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Azzurro Dashboard{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <link rel="stylesheet" href="{% static 'dashboard/css/styles.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-mark">⚡</div>
+            <div class="brand-text">
+                <span class="brand-name">Azzurro</span>
+                <span class="brand-sub">Home Energy</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <span class="nav-icon">◉</span> Live Flow
+            </a>
+            <a href="{% url 'history' %}" class="nav-item {% if request.resolver_match.url_name == 'history' %}active{% endif %}">
+                <span class="nav-icon">≋</span> History
+            </a>
+            <a href="{% url 'settings' %}" class="nav-item {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+                <span class="nav-icon">⚙</span> Settings
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="plant-card">
+                <div class="plant-status">
+                    <span class="status-dot" id="sidebar-status-dot"></span>
+                    <span id="sidebar-status-text">loading…</span>
+                </div>
+                <div class="plant-id" title="{{ plant.thing_key }}">
+                    {% if plant.thing_key %}{{ plant.thing_key }}{% else %}— serial —{% endif %}
+                </div>
+                {% if plant.use_mock %}
+                <div class="mock-badge" title="No ZCS credentials configured, showing synthetic data">
+                    DEMO DATA
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+            <div class="topbar-right">
+                <div class="topbar-updated hidden" id="topbar-updated">
+                    <span class="updated-dot"></span>
+                    Updated <span id="last-update">—</span>
+                </div>
+                <div class="live-indicator"><span class="live-pulse"></span> LIVE</div>
+                <div class="clock" id="clock">--:--:--</div>
+            </div>
+        </header>
+
+        <main class="content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<script>window.PLANT_MAX_HISTORY_DAYS = {{ plant.max_history_days }};</script>
+<script src="{% static 'dashboard/js/base.js' %}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,60 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}History · Azzurro Dashboard{% endblock %}
+{% block page_title %}History &amp; Analytics{% endblock %}
+
+{% block extra_head %}
+<script src="{% static 'dashboard/vendor/echarts.min.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">Range</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn" data-range="24h">Last 24h</button>
+            <button class="btn" data-range="yesterday">Yesterday</button>
+            <button class="btn" data-range="7d">Last 7 days</button>
+            <button class="btn primary" id="apply-range">Apply</button>
+        </div>
+    </div>
+    <div class="controls">
+        <div class="control-group">
+            <label for="start">Start</label>
+            <input type="datetime-local" id="start">
+        </div>
+        <div class="control-group">
+            <label for="end">End</label>
+            <input type="datetime-local" id="end">
+        </div>
+    </div>
+</div>
+
+<div class="error-banner hidden" id="history-error"></div>
+
+<div id="history-content">
+    <div class="summary-strip" id="summary-strip"></div>
+
+    <div class="history-charts">
+        <div class="card">
+            <div class="card-header"><div class="card-title">Power</div></div>
+            <div class="card-body"><div class="chart" id="chart-power" style="height: 360px;"></div></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><div class="card-title">Battery State of Charge</div></div>
+            <div class="card-body"><div class="chart" id="chart-soc" style="height: 260px;"></div></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><div class="card-title">Energy</div></div>
+            <div class="card-body"><div class="chart" id="chart-energy" style="height: 300px;"></div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'dashboard/js/history.js' %}"></script>
+{% endblock %}

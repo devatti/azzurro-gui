@@ -1,0 +1,100 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+
+{% block title %}Live Flow · Azzurro Dashboard{% endblock %}
+{% block page_title %}Live Flow{% endblock %}
+
+{% block extra_head %}
+<script src="{% static 'dashboard/vendor/echarts.min.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="error-banner hidden" id="error-banner"></div>
+
+<section class="kpi-grid" id="kpi-grid">
+    <div class="kpi" style="--kpi-color: var(--amber)">
+        <div class="kpi-label"><span class="kpi-icon">☀️</span> PV Generation</div>
+        <div class="kpi-value"><span data-kpi="generating">—</span></div>
+        <div class="kpi-sub"><span data-kpi="generating-today">—</span> today · <span data-kpi="generating-total">—</span> total</div>
+    </div>
+
+    <div class="kpi" style="--kpi-color: var(--purple)">
+        <div class="kpi-label"><span class="kpi-icon">🏠</span> Home Consumption</div>
+        <div class="kpi-value"><span data-kpi="consuming">—</span></div>
+        <div class="kpi-sub"><span data-kpi="consuming-today">—</span> today</div>
+    </div>
+
+    <div class="kpi" style="--kpi-color: var(--green)">
+        <div class="kpi-label"><span class="kpi-icon">🔋</span> Battery SoC</div>
+        <div class="kpi-value"><span data-kpi="soc">—</span><small>%</small></div>
+        <div class="kpi-sub"><span data-kpi="charge-status">—</span> · <span data-kpi="battery-cycles">—</span> cycles · B2 <span data-kpi="soc-2">—</span>%</div>
+    </div>
+
+    <div class="kpi" style="--kpi-color: var(--blue)">
+        <div class="kpi-label"><span class="kpi-icon">⚡</span> Grid</div>
+        <div class="kpi-value"><span data-kpi="grid">—</span></div>
+        <div class="kpi-sub"><span data-kpi="grid-status">—</span></div>
+    </div>
+
+    <div class="kpi" style="--kpi-color: var(--cyan)">
+        <div class="kpi-label"><span class="kpi-icon">🔁</span> Self-Consumption</div>
+        <div class="kpi-value"><span data-kpi="autoconsuming">—</span></div>
+        <div class="kpi-sub"><span data-kpi="autoconsuming-today">—</span> today</div>
+    </div>
+
+    <div class="kpi" style="--kpi-color: var(--accent)">
+        <div class="kpi-label"><span class="kpi-icon">⚡</span> Inverter</div>
+        <div class="inverter-art">
+            <svg viewBox="0 0 96 48" fill="none" aria-hidden="true">
+                <rect x="2" y="4" width="92" height="40" rx="9" stroke="var(--accent)" stroke-opacity=".7" stroke-width="1.6" fill="var(--accent-soft)"/>
+                <path d="M19 12v6M16 15h6" stroke="var(--amber)" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M19 30v6M16 33h6" stroke="var(--amber)" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M34 24h16" stroke="var(--text-faint)" stroke-width="1.6" stroke-linecap="round"/>
+                <path d="M44 18l8 6-8 6" stroke="var(--text-faint)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M61 24c4 0 4-8 8-8s4 8 8 8 4-8 8-8 4 8 8 8" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div class="kpi-sub">DC → AC conversion</div>
+    </div>
+</section>
+
+<section class="flow-section card">
+    <div class="card-header">
+        <div class="card-title">Energy Flow</div>
+        <div class="flow-legend">
+            <span class="legend-item"><span class="legend-dot" style="background:var(--amber)"></span> Solar</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--purple)"></span> Home</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--blue)"></span> Grid</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--green)"></span> Battery</span>
+        </div>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div id="flow-canvas"></div>
+    </div>
+</section>
+
+<section class="chart-grid">
+    <div class="card">
+        <div class="card-header"><div class="card-title">Today's Power</div></div>
+        <div class="card-body"><div class="chart" id="chart-today"></div></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><div class="card-title">Battery</div></div>
+        <div class="card-body">
+            <div class="gauge-chart" id="gauge-soc"></div>
+            <div id="battery-metrics" class="node-meta" style="text-align:center;"></div>
+        </div>
+    </div>
+</section>
+
+<section class="card">
+    <div class="card-header"><div class="card-title">Energy Today (kWh)</div></div>
+    <div class="card-body"><div class="chart" id="chart-energy" style="height: 220px;"></div></div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'dashboard/js/flow.js' %}"></script>
+<script src="{% static 'dashboard/js/dashboard.js' %}"></script>
+{% endblock %}
