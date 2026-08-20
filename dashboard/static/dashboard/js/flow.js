@@ -153,7 +153,7 @@
             this._setNode('battery', `${s.battery_soc != null ? Math.round(s.battery_soc) : '—'}%`, `SoC · ${this._fmt(p.charging)} / ${this._fmt(p.discharging)}`);
 
             const net = (p.exporting || 0) - (p.importing || 0);
-            this._setNode('grid', `${net >= 0 ? '+' : ''}${this._fmt(Math.abs(net))}`, net >= 0 ? 'exporting to grid' : 'importing from grid');
+            this._setNode('grid', `${net < 0 ? '−' : ''}${this._fmt(Math.abs(net))}`, net >= 0 ? 'exporting to grid' : 'importing from grid');
 
             // ---- edges ----
             const pvOn = (p.generating || 0) > 20;
@@ -166,8 +166,8 @@
             this._edge('pv', pvOn, false, pvOn ? p.generating : null);
             this._edge('home', homeOn, false, homeOn ? p.autoconsuming : null);
 
-            if (exportOn) this._edge('grid', true, false, p.exporting);
-            else if (importOn) this._edge('grid', true, true, p.importing);
+            if (exportOn) this._edge('grid', true, true, p.exporting);
+            else if (importOn) this._edge('grid', true, false, p.importing);
             else this._edge('grid', false, false, null);
 
             if (chargeOn) this._edge('battery', true, false, p.charging);
