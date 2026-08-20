@@ -20,6 +20,9 @@ diagrams and charts.
 - **Local history persistence** — fetched samples are stored in SQLite, so
   previously loaded windows are served from the database without hitting the
   portal again.
+- **Weather widget** — set a city on the Settings page and the dashboard shows
+  current conditions and a short forecast (provided by Open-Meteo, no API key
+  needed).
 - **Settings page** — enter or change the ZCS credentials directly from the UI;
   they are stored **encrypted** in the database.
 - **Mock mode** — runs out of the box with realistic synthetic data when ZCS
@@ -83,6 +86,7 @@ To stop: `docker compose down`. To stop and wipe the database:
 | `/history/` | Historical data explorer with charts and peak summaries |
 | `/settings/` | Portal settings — enter/change ZCS credentials (stored encrypted in the DB) |
 | `/api/realtime/` | JSON realtime snapshot (used by the dashboard poller) |
+| `/api/weather/` | JSON current weather + forecast for the configured city (`{"configured": false}` when none) |
 | `/api/history/?start=&end=` | JSON history between two ISO datetimes |
 
 ## ZCS Azzurro credentials
@@ -120,6 +124,10 @@ Django and portal settings:
 | `ZCS_REALTIME_CACHE_TTL` | `30` | Realtime poll cache in seconds |
 | `ZCS_MAX_HISTORY_SPAN` | `24` | Max span of a single historic request (hours) |
 | `ZCS_MAX_HISTORY_DAYS` | `7` | How far back the history page can look (days) |
+| `WEATHER_API_URL` | `https://api.open-meteo.com/v1` | Open-Meteo forecast endpoint |
+| `WEATHER_GEOCODE_URL` | `https://geocoding-api.open-meteo.com/v1` | Open-Meteo geocoding endpoint (city → coordinates) |
+| `WEATHER_CACHE_TTL` | `1800` | Weather snapshot cache in seconds |
+| `WEATHER_FORECAST_DAYS` | `5` | Forecast days shown in the widget |
 
 > Stored credentials are encrypted with a key derived from `SECRET_KEY`
 > (`DJANGO_SECRET_KEY`). If you rotate that key, previously stored credentials
@@ -129,6 +137,15 @@ Django and portal settings:
 > sampling**. Longer ranges are split automatically; the history page caps the
 > range at `ZCS_MAX_HISTORY_DAYS` (default 7).
 
+## Weather
+
+Weather is optional and independent of the ZCS credentials: type a city name on
+the **Settings page** (e.g. `Rome`) and the dashboard shows current conditions
+plus a 5-day forecast. Data comes from **Open-Meteo** (free, no API key) —
+the city is geocoded to coordinates and the result is cached for
+`WEATHER_CACHE_TTL` seconds. Leave the city empty to hide the widget. Weather
+data requires outbound internet access to `api.open-meteo.com`.
+
 ## Project layout
 
 ```
@@ -137,7 +154,8 @@ azzurro-gui/
 ├── dashboard/          # main app
 │   ├── services/
 │   │   ├── zcs.py          # ZCSService: portal parsing + mock data
-│   │   ├── config.py       # effective config (DB-stored credentials)
+│   │   ├── weather.py      # WeatherService: Open-Meteo current + forecast
+│   │   ├── config.py       # effective config (DB-stored credentials/city)
 │   │   ├── crypto.py       # Fernet encryption of stored credentials
 │   │   └── persistence.py  # SQLite storage of historical samples
 │   ├── models.py           # HistoricSample + ZCSConfiguration (encrypted)

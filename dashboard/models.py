@@ -39,6 +39,12 @@ class ZCSConfiguration(models.Model):
     thing_key_enc = models.TextField(default='', blank=True)
     client_code_enc = models.TextField(default='', blank=True)
     auth_code_enc = models.TextField(default='', blank=True)
+    city = models.CharField(
+        max_length=100,
+        default='',
+        blank=True,
+        help_text='City used for the weather widget (e.g. "Rome, IT").',
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

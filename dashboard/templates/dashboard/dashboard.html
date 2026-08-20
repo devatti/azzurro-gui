@@ -58,6 +58,30 @@
     </div>
 </section>
 
+{% if plant.city %}
+<section class="card weather-card" id="weather-card">
+    <div class="card-header">
+        <div class="card-title">Weather · <span id="weather-city">{{ plant.city }}</span></div>
+        <div class="weather-updated" id="weather-updated"></div>
+    </div>
+    <div class="card-body">
+        <div class="weather-error hidden" id="weather-error"></div>
+        <div class="weather-grid hidden" id="weather-grid">
+            <div class="weather-current">
+                <div class="weather-icon" id="weather-current-icon">🌡️</div>
+                <div class="weather-cond">
+                    <div class="weather-temp" id="weather-current-temp">—</div>
+                    <div class="weather-desc" id="weather-current-desc">—</div>
+                </div>
+                <div class="weather-details" id="weather-current-details"></div>
+            </div>
+            <div class="weather-forecast" id="weather-forecast"></div>
+        </div>
+        <div class="loading-line" id="weather-loading" style="width: 40%;"></div>
+    </div>
+</section>
+{% endif %}
+
 <section class="flow-section card">
     <div class="card-header">
         <div class="card-title">Energy Flow</div>

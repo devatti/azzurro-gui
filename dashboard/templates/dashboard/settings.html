@@ -57,6 +57,24 @@
             <div class="control-group">
                 <label class="checkbox-label"><input type="checkbox" id="show-codes"> Show codes</label>
             </div>
+
+            <div class="settings-section-divider"></div>
+
+            <div class="card-title" style="margin-bottom: 10px;">Weather location</div>
+            <p class="settings-hint" style="margin-bottom: 10px;">
+                Set a city to show <strong>current conditions</strong> and a short
+                <strong>forecast</strong> on the dashboard. Weather data is provided by
+                Open-Meteo (no API key required).
+            </p>
+            <div class="control-group">
+                <label for="city">City</label>
+                <input type="text" id="city" name="city" value="{{ config.city }}"
+                       placeholder="e.g. Rome, IT" autocomplete="off">
+                <span class="field-status {% if config.city %}stored{% endif %}">
+                    {% if config.city %}● configured{% else %}○ not set — widget hidden{% endif %}
+                </span>
+            </div>
+
             <div class="settings-actions">
                 <button type="submit" class="btn primary" name="action" value="save">Save</button>
                 <button type="submit" class="btn danger" name="action" value="clear"

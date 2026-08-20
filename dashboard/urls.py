@@ -7,5 +7,6 @@ urlpatterns = [
     path('history/', views.history, name='history'),
     path('settings/', views.portal_settings, name='settings'),
     path('api/realtime/', views.api_realtime, name='api-realtime'),
+    path('api/weather/', views.api_weather, name='api-weather'),
     path('api/history/', views.api_history, name='api-history'),
 ]

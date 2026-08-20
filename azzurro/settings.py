@@ -149,3 +149,18 @@ ZCS_REALTIME_CACHE_TTL = int(os.environ.get('ZCS_REALTIME_CACHE_TTL', '30'))
 ZCS_MAX_HISTORY_SPAN = int(os.environ.get('ZCS_MAX_HISTORY_SPAN', '24'))
 # Cap on how far back the history page is allowed to look, in days.
 ZCS_MAX_HISTORY_DAYS = int(os.environ.get('ZCS_MAX_HISTORY_DAYS', '7'))
+
+
+# --------------------------------------------------------------------------
+# Weather configuration (Open-Meteo)
+# --------------------------------------------------------------------------
+# Current conditions + forecast come from Open-Meteo, which needs no API key.
+# The city is entered on the Settings page and stored in the database.
+WEATHER_API_URL = os.environ.get('WEATHER_API_URL', 'https://api.open-meteo.com/v1')
+WEATHER_GEOCODE_URL = os.environ.get(
+    'WEATHER_GEOCODE_URL', 'https://geocoding-api.open-meteo.com/v1'
+)
+# How long (seconds) a weather snapshot stays cached before hitting the API.
+WEATHER_CACHE_TTL = int(os.environ.get('WEATHER_CACHE_TTL', '1800'))
+# How many forecast days to include in the widget (max supported by Open-Meteo).
+WEATHER_FORECAST_DAYS = int(os.environ.get('WEATHER_FORECAST_DAYS', '5'))

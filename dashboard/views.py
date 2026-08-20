@@ -10,6 +10,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 
 from .models import ZCSConfiguration
 from .services.config import get_config
+from .services.weather import WeatherError, WeatherService
 from .services.zcs import ZCSError, ZCSService
 
 
@@ -37,6 +38,7 @@ def portal_settings(request):
     saved = False
 
     if request.method == 'POST':
+        city = request.POST.get('city', '').strip()
         if request.POST.get('action') == 'clear':
             cfg.set_credentials('', '', '')
             cfg.save()
@@ -52,11 +54,18 @@ def portal_settings(request):
                 auth_code or cfg.auth_code,
                 url=url,
             )
+            if city:
+                cfg.city = city
+            cfg.save()
         saved = True
 
-        # New credentials take effect immediately: drop cached snapshots.
+        # New settings take effect immediately: drop cached snapshots.
         from django.core.cache import cache
+        from .services.weather import _cache_key
         cache.delete('zcs:realtime')
+        for cached_city in {config['city'], city}:
+            if cached_city:
+                cache.delete(_cache_key(cached_city))
         config = get_config()
 
     return render(request, 'dashboard/settings.html', {
@@ -74,6 +83,23 @@ def api_realtime(request):
     except ZCSError as exc:
         return JsonResponse({'error': str(exc)}, status=503)
     return JsonResponse(snapshot)
+
+
+@require_GET
+def api_weather(request):
+    """Current weather + short forecast for the configured city.
+
+    Returns ``{'configured': False}`` when no city is configured so the
+    frontend keeps the widget hidden.
+    """
+    service = WeatherService()
+    try:
+        weather = service.get_weather()
+    except WeatherError as exc:
+        return JsonResponse({'configured': True, 'error': str(exc)}, status=503)
+    if weather is None:
+        return JsonResponse({'configured': False})
+    return JsonResponse(weather)
 
 
 @require_GET

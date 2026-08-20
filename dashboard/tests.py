@@ -1,10 +1,13 @@
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
+import requests
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 from .models import ZCSConfiguration
 from .services.config import get_config
+from .services.weather import WeatherError, WeatherService
 from .services.zcs import (
     MockPlant,
     ZCSService,
@@ -157,6 +160,141 @@ class ViewTests(TestCase):
         self.assertIsInstance(ZCSService(), ZCSService)
 
 
+class WeatherServiceTests(TestCase):
+    GEO_PAYLOAD = {
+        'results': [{
+            'name': 'Rome',
+            'country': 'Italy',
+            'latitude': 41.89,
+            'longitude': 12.49,
+            'timezone': 'Europe/Rome',
+        }],
+    }
+    FORECAST_PAYLOAD = {
+        'current': {
+            'time': '2026-08-20T12:00',
+            'temperature_2m': 26.4,
+            'apparent_temperature': 26.1,
+            'relative_humidity_2m': 55,
+            'is_day': 1,
+            'precipitation': 0.0,
+            'weather_code': 2,
+            'wind_speed_10m': 12.3,
+        },
+        'daily': {
+            'time': ['2026-08-20', '2026-08-21'],
+            'weather_code': [2, 61],
+            'temperature_2m_max': [29.0, 27.0],
+            'temperature_2m_min': [18.0, 17.0],
+            'precipitation_probability_max': [10, 80],
+        },
+    }
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    def _mock_requests(self, forecast=FORECAST_PAYLOAD, geo=GEO_PAYLOAD):
+        def fake_get(url, params=None, **kwargs):
+            class Resp:
+                status_code = 200
+
+                def raise_for_status(self):
+                    return None
+
+                def json(self):
+                    if 'geocoding' in url:
+                        return geo
+                    return forecast
+
+            return Resp()
+
+        return patch('dashboard.services.weather.requests.get', side_effect=fake_get)
+
+    @override_settings(WEATHER_CACHE_TTL=1)
+    def test_not_configured_returns_none(self):
+        cfg = ZCSConfiguration.get_instance()
+        cfg.city = ''
+        cfg.save()
+        self.assertIsNone(WeatherService().get_weather())
+
+    @override_settings(WEATHER_CACHE_TTL=1)
+    def test_normalized_snapshot(self):
+        cfg = ZCSConfiguration.get_instance()
+        cfg.city = 'Rome, IT'
+        cfg.save()
+        with self._mock_requests():
+            weather = WeatherService().get_weather()
+        self.assertTrue(weather['configured'])
+        self.assertEqual(weather['city'], 'Rome')
+        self.assertEqual(weather['current']['temperature'], 26.4)
+        self.assertEqual(weather['current']['description'], 'Partly cloudy')
+        self.assertEqual(len(weather['daily']), 2)
+        self.assertEqual(weather['daily'][1]['description'], 'Light rain')
+        self.assertEqual(weather['daily'][1]['precip_prob'], 80)
+
+    @override_settings(WEATHER_CACHE_TTL=1)
+    def test_unknown_city_raises(self):
+        cfg = ZCSConfiguration.get_instance()
+        cfg.city = 'Nowhereville'
+        cfg.save()
+        with self._mock_requests(geo={'results': []}):
+            with self.assertRaises(WeatherError):
+                WeatherService().get_weather()
+
+    @override_settings(WEATHER_CACHE_TTL=1)
+    def test_api_reachability_error_raises(self):
+        cfg = ZCSConfiguration.get_instance()
+        cfg.city = 'Rome, IT'
+        cfg.save()
+
+        def boom(url, params=None, **kwargs):
+            raise requests.ConnectionError('network down')
+
+        with patch('dashboard.services.weather.requests.get', side_effect=boom):
+            with self.assertRaises(WeatherError):
+                WeatherService().get_weather()
+
+
+class WeatherApiViewTests(TestCase):
+    def test_not_configured_returns_configured_false(self):
+        cfg = ZCSConfiguration.get_instance()
+        cfg.city = ''
+        cfg.save()
+        res = self.client.get(reverse('api-weather'))
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json(), {'configured': False})
+
+    @override_settings(WEATHER_CACHE_TTL=1)
+    def test_configured_returns_snapshot(self):
+        cfg = ZCSConfiguration.get_instance()
+        cfg.city = 'Rome, IT'
+        cfg.save()
+
+        geo = {'results': [{'name': 'Rome', 'country': 'Italy', 'latitude': 41.89, 'longitude': 12.49, 'timezone': 'Europe/Rome'}]}
+        forecast = {
+            'current': {'time': '2026-08-20T12:00', 'temperature_2m': 26.4, 'apparent_temperature': 26.1, 'relative_humidity_2m': 55, 'is_day': 1, 'precipitation': 0.0, 'weather_code': 0, 'wind_speed_10m': 12.3},
+            'daily': {'time': ['2026-08-20'], 'weather_code': [0], 'temperature_2m_max': [29.0], 'temperature_2m_min': [18.0], 'precipitation_probability_max': [10]},
+        }
+
+        def fake_get(url, params=None, **kwargs):
+            class Resp:
+                def raise_for_status(self):
+                    return None
+
+                def json(self):
+                    return geo if 'geocoding' in url else forecast
+
+            return Resp()
+
+        with patch('dashboard.services.weather.requests.get', side_effect=fake_get):
+            res = self.client.get(reverse('api-weather'))
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data['configured'])
+        self.assertEqual(data['current']['temperature'], 26.4)
+
+
 class ZCSConfigurationTests(TestCase):
     def test_credentials_roundtrip_encrypted(self):
         cfg = ZCSConfiguration.get_instance()
@@ -215,3 +353,35 @@ class PortalSettingsViewTests(TestCase):
         cfg = ZCSConfiguration.objects.get(pk=1)
         self.assertEqual((cfg.thing_key, cfg.client_code, cfg.auth_code), ('', '', ''))
         self.assertTrue(get_config()['use_mock'])
+
+    def test_save_stores_city(self):
+        cfg = ZCSConfiguration.get_instance()
+        cfg.city = ''
+        cfg.save()
+        self.client.post(reverse('settings'), {'action': 'save', 'city': 'Rome, IT'})
+        cfg = ZCSConfiguration.objects.get(pk=1)
+        self.assertEqual(cfg.city, 'Rome, IT')
+
+    def test_blank_city_keeps_current(self):
+        cfg = ZCSConfiguration.get_instance()
+        cfg.city = 'Milan, IT'
+        cfg.save()
+        self.client.post(reverse('settings'), {'action': 'save', 'city': ''})
+        cfg = ZCSConfiguration.objects.get(pk=1)
+        self.assertEqual(cfg.city, 'Milan, IT')
+
+    def test_dashboard_shows_weather_widget_when_city_set(self):
+        cfg = ZCSConfiguration.get_instance()
+        cfg.city = 'Rome, IT'
+        cfg.save()
+        res = self.client.get(reverse('dashboard'))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'weather-card')
+
+    def test_dashboard_hides_weather_widget_without_city(self):
+        cfg = ZCSConfiguration.get_instance()
+        cfg.city = ''
+        cfg.save()
+        res = self.client.get(reverse('dashboard'))
+        self.assertEqual(res.status_code, 200)
+        self.assertNotContains(res, 'weather-card')

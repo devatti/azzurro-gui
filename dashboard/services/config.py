@@ -32,4 +32,5 @@ def get_config():
         'client_code': client_code,
         'auth_code': auth_code,
         'use_mock': use_mock,
+        'city': cfg.city,
     }

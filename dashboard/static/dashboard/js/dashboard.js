@@ -3,7 +3,9 @@
     'use strict';
 
     const POLL_MS = 10000;
+    const WEATHER_POLL_MS = 1800000;
     const REALTIME_URL = '/api/realtime/';
+    const WEATHER_URL = '/api/weather/';
     const HISTORY_URL = '/api/history/';
 
     const els = {
@@ -18,6 +20,7 @@
         chartEnergy: document.getElementById('chart-energy'),
         lastUpdate: document.getElementById('last-update'),
         lastUpdateWrap: document.getElementById('topbar-updated'),
+        weatherCard: document.getElementById('weather-card'),
     };
 
     let flow = null;
@@ -301,11 +304,104 @@
         }
     }
 
+    function renderWeather(data) {
+        if (!els.weatherCard) return;
+        const loading = document.getElementById('weather-loading');
+        const grid = document.getElementById('weather-grid');
+        const errorBox = document.getElementById('weather-error');
+
+        if (loading) loading.classList.add('hidden');
+        if (errorBox) errorBox.classList.add('hidden');
+
+        if (data.error) {
+            if (errorBox) {
+                errorBox.textContent = 'Weather unavailable: ' + data.error;
+                errorBox.classList.remove('hidden');
+            }
+            if (grid) grid.classList.add('hidden');
+            return;
+        }
+        if (!data.current || !data.daily) return;
+
+        const cityEl = document.getElementById('weather-city');
+        if (cityEl) cityEl.textContent = data.city || data.city_title || '';
+        const updated = document.getElementById('weather-updated');
+        if (updated && data.current.time) {
+            updated.textContent = 'Updated ' + new Date(data.current.time).toLocaleTimeString([], {
+                hour: '2-digit', minute: '2-digit',
+            });
+        }
+
+        setText('weather-current-icon', data.current.icon);
+        setText('weather-current-temp', Math.round(data.current.temperature) + '°C');
+        setText('weather-current-desc', data.current.description);
+
+        const details = document.getElementById('weather-current-details');
+        if (details) {
+            const c = data.current;
+            const parts = [
+                c.apparent_temperature != null ? 'Feels ' + Math.round(c.apparent_temperature) + '°' : null,
+                c.humidity != null ? c.humidity + '% humidity' : null,
+                c.wind_speed != null ? Math.round(c.wind_speed) + ' km/h' : null,
+                c.precipitation != null && c.precipitation > 0 ? c.precipitation + ' mm' : null,
+            ].filter(Boolean);
+            details.textContent = parts.join(' · ') || '';
+        }
+
+        const forecast = document.getElementById('weather-forecast');
+        if (forecast) {
+            forecast.innerHTML = '';
+            data.daily.forEach(day => {
+                const el = document.createElement('div');
+                el.className = 'weather-day';
+                const name = new Date(day.date + 'T12:00:00').toLocaleDateString([], { weekday: 'short' });
+                el.innerHTML =
+                    '<div class="weather-day-name">' + name + '</div>' +
+                    '<div class="weather-day-icon">' + day.icon + '</div>' +
+                    '<div class="weather-day-temps"><span>' + Math.round(day.max) + '°</span> <span class="faint">' +
+                    Math.round(day.min) + '°</span></div>' +
+                    (day.precip_prob != null
+                        ? '<div class="weather-day-rain" title="Precip. probability">' + day.precip_prob + '%</div>'
+                        : '');
+                forecast.appendChild(el);
+            });
+        }
+
+        if (grid) grid.classList.remove('hidden');
+    }
+
+    function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    }
+
+    async function loadWeather() {
+        if (!els.weatherCard) return;
+        try {
+            const data = await fetchJSON(WEATHER_URL);
+            if (data.configured) {
+                renderWeather(data);
+            } else {
+                els.weatherCard.classList.add('hidden');
+            }
+        } catch (err) {
+            const errorBox = document.getElementById('weather-error');
+            const loading = document.getElementById('weather-loading');
+            if (loading) loading.classList.add('hidden');
+            if (errorBox) {
+                errorBox.textContent = 'Weather unavailable: ' + err.message;
+                errorBox.classList.remove('hidden');
+            }
+        }
+    }
+
     function init() {
         flow = new FlowDiagram(els.flow);
         loadRealtime();
         loadTodayHistory();
+        loadWeather();
         setInterval(loadRealtime, POLL_MS);
+        setInterval(loadWeather, WEATHER_POLL_MS);
 
         window.addEventListener('resize', () => {
             Object.values(charts).forEach(c => c && c.resize());
