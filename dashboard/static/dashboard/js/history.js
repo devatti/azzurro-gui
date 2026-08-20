@@ -178,6 +178,7 @@
     function addLine(chart, name, key, color, opts = {}) {
         return {
             name,
+            key,
             type: 'line',
             showSymbol: false,
             smooth: true,
