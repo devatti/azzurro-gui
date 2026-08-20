@@ -348,6 +348,16 @@
             details.textContent = parts.join(' · ') || '';
         }
 
+        const sun = document.getElementById('weather-sun');
+        if (sun && data.daily && data.daily.length) {
+            const today = data.daily[0];
+            sun.innerHTML = buildSunArc(
+                today.sunrise,
+                today.sunset,
+                data.current && data.current.time,
+            );
+        }
+
         const forecast = document.getElementById('weather-forecast');
         if (forecast) {
             forecast.innerHTML = '';
@@ -373,6 +383,67 @@
     function setText(id, value) {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
+    }
+
+    function buildSunArc(sunrise, sunset, now) {
+        if (!sunrise || !sunset) return '';
+        const toMin = str => {
+            const t = (str || '').split('T')[1];
+            if (!t) return null;
+            const p = t.split(':');
+            return Number(p[0]) * 60 + Number(p[1]);
+        };
+        const fmt = str => str.split('T')[1].slice(0, 5);
+        const rs = toMin(sunrise);
+        const ss = toMin(sunset);
+        if (rs == null || ss == null) return '';
+
+        const A0 = 147.4, A1 = 32.6;
+        const CX = 100, CY = 111.2, R = 95;
+        const pt = a => ({
+            x: CX + R * Math.cos(a * Math.PI / 180),
+            y: CY - R * Math.sin(a * Math.PI / 180),
+        });
+
+        let sunEl = '';
+        const span = ss - rs;
+        const nowMin = toMin(now);
+        if (span > 0 && nowMin != null) {
+            const frac = Math.min(1, Math.max(0, (nowMin - rs) / span));
+            const p = pt(A0 - (A0 - A1) * frac);
+            const rays = [
+                '<line x1="0" y1="-8" x2="0" y2="-11"/>',
+                '<line x1="0" y1="8" x2="0" y2="11"/>',
+                '<line x1="-8" y1="0" x2="-11" y2="0"/>',
+                '<line x1="8" y1="0" x2="11" y2="0"/>',
+                '<line x1="-6" y1="-6" x2="-8" y2="-8"/>',
+                '<line x1="6" y1="6" x2="8" y2="8"/>',
+                '<line x1="-6" y1="6" x2="-8" y2="8"/>',
+                '<line x1="6" y1="-6" x2="8" y2="-8"/>',
+            ].join('');
+            sunEl =
+                '<path class="sun-arc-progress" d="M 20 60 A 95 95 0 0 1 ' +
+                p.x.toFixed(2) + ' ' + p.y.toFixed(2) + '"/>' +
+                '<g class="sun-icon-group" transform="translate(' +
+                p.x.toFixed(2) + ',' + p.y.toFixed(2) + ')">' +
+                    '<circle cx="0" cy="0" r="7"/>' +
+                    '<g stroke-linecap="round">' + rays + '</g>' +
+                '</g>';
+        }
+
+        return (
+            '<svg class="sun-arc" viewBox="0 0 200 102" role="img" aria-label="Sunrise ' + fmt(sunrise) +
+            ', sunset ' + fmt(sunset) + '">' +
+                '<defs><linearGradient id="sun-gradient" x1="0%" y1="0%" x2="100%" y2="0%">' +
+                    '<stop offset="0%" stop-color="#FBA160"/>' +
+                    '<stop offset="100%" stop-color="#FBBB10"/>' +
+                '</linearGradient></defs>' +
+                '<path class="sun-arc-track" d="M 20 60 A 95 95 0 0 1 180 60"/>' +
+                sunEl +
+                '<text class="sun-arc-label" x="20" y="84" text-anchor="middle">' + fmt(sunrise) + '</text>' +
+                '<text class="sun-arc-label" x="180" y="84" text-anchor="middle">' + fmt(sunset) + '</text>' +
+            '</svg>'
+        );
     }
 
     async function loadWeather() {

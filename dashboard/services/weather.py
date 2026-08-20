@@ -177,6 +177,8 @@ class WeatherService:
         tmax = daily.get('temperature_2m_max') or []
         tmin = daily.get('temperature_2m_min') or []
         precip = daily.get('precipitation_probability_max') or []
+        sunrise = daily.get('sunrise') or []
+        sunset = daily.get('sunset') or []
         days = []
         for idx, day in enumerate(times):
             code = codes[idx] if idx < len(codes) else None
@@ -189,5 +191,7 @@ class WeatherService:
                 'min': tmin[idx] if idx < len(tmin) else None,
                 'max': tmax[idx] if idx < len(tmax) else None,
                 'precip_prob': precip[idx] if idx < len(precip) else None,
+                'sunrise': sunrise[idx] if idx < len(sunrise) else None,
+                'sunset': sunset[idx] if idx < len(sunset) else None,
             })
         return days

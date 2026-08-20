@@ -187,6 +187,8 @@ class WeatherServiceTests(TestCase):
             'temperature_2m_max': [29.0, 27.0],
             'temperature_2m_min': [18.0, 17.0],
             'precipitation_probability_max': [10, 80],
+            'sunrise': ['2026-08-20T06:12', '2026-08-21T06:13'],
+            'sunset': ['2026-08-20T20:03', '2026-08-21T20:01'],
         },
     }
 
@@ -232,6 +234,8 @@ class WeatherServiceTests(TestCase):
         self.assertEqual(len(weather['daily']), 2)
         self.assertEqual(weather['daily'][1]['description'], 'Light rain')
         self.assertEqual(weather['daily'][1]['precip_prob'], 80)
+        self.assertEqual(weather['daily'][0]['sunrise'], '2026-08-20T06:12')
+        self.assertEqual(weather['daily'][0]['sunset'], '2026-08-20T20:03')
 
     @override_settings(WEATHER_CACHE_TTL=1)
     def test_unknown_city_raises(self):
@@ -274,7 +278,7 @@ class WeatherApiViewTests(TestCase):
         geo = {'results': [{'name': 'Rome', 'country': 'Italy', 'latitude': 41.89, 'longitude': 12.49, 'timezone': 'Europe/Rome'}]}
         forecast = {
             'current': {'time': '2026-08-20T12:00', 'temperature_2m': 26.4, 'apparent_temperature': 26.1, 'relative_humidity_2m': 55, 'is_day': 1, 'precipitation': 0.0, 'weather_code': 0, 'wind_speed_10m': 12.3},
-            'daily': {'time': ['2026-08-20'], 'weather_code': [0], 'temperature_2m_max': [29.0], 'temperature_2m_min': [18.0], 'precipitation_probability_max': [10]},
+            'daily': {'time': ['2026-08-20'], 'weather_code': [0], 'temperature_2m_max': [29.0], 'temperature_2m_min': [18.0], 'precipitation_probability_max': [10], 'sunrise': ['2026-08-20T06:12'], 'sunset': ['2026-08-20T20:03']},
         }
 
         def fake_get(url, params=None, **kwargs):
